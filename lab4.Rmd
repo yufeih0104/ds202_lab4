@@ -1,0 +1,149 @@
+---
+title: "lab4"
+author: "Yufei Huang"
+date: "2021/3/19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Library
+```{r}
+library(readxl)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+```
+
+### Read data
+```{r}
+defense <- read_excel('cyclonesFootball2020.xlsx', sheet='Defensive')
+str(defense)
+```
+```{r}
+offensive <- read_excel('cyclonesFootball2020.xlsx', sheet='Offensive')
+str(offensive)
+```
+
+```{r}
+biography <- read_excel('cyclonesFootball2020.xlsx', sheet='Biography')
+str(biography)
+```
+
+
+### Part 1
+1)
+```{r}
+defense$Name <- as.factor(defense$Name)
+defense$Opponent_Opponent <- as.factor(defense$Opponent_Opponent)
+
+offensive$Name <- as.factor(offensive$Name)
+offensive$Opponent_Opponent <- as.factor(offensive$Opponent_Opponent)
+
+biography$Name <- as.factor(biography$Name)
+```
+
+2)
+```{r, warning=F}
+def.num <- c("Tackles_Solo","Tackles_ASST", "Tackles_TFL", "Tackles_Sack", "Turnover_FF", "Turnover_FR",
+             "Turnover_INT", "Pass_QBH", "Pass_PB")
+
+off.num <- c("Receiving_REC","Receiving_YDS", "Receiving_TD", "Rushing_ATT", "Rushing_YDS", "Rushing_TD",
+             "Passing_CMP-ATT", "Passing_YDS", "Passing_TD", "Passing_INT")
+
+bio.num <- c("Weight")
+
+defense[def.num] <- sapply(defense[def.num],as.numeric)
+offensive[off.num] <- sapply(offensive[off.num],as.numeric)
+biography[bio.num] <- sapply(biography[bio.num],as.numeric)
+```
+
+3)
+```{r}
+feet <- as.double(substr(biography$Height, 0, 1))
+inches <- as.double(substr(biography$Height, 3, 4))
+
+newHeight <- feet+inches/12
+biography$Height <- newHeight
+```
+
+final data sets)
+```{r}
+defClean = defense
+str(defClean)
+defClean
+
+offClean = offensive
+str(offClean)
+offClean
+
+bioClean = biography
+str(bioClean)
+bioClean
+```
+
+
+### Part 2
+1)
+```{r}
+newoffClean <- offClean %>%
+  pivot_longer(Receiving_REC: Passing_INT, names_to = "stat", values_to = "value")
+newoffClean
+```
+
+2)
+```{r, warning=F}
+ggplot(newoffClean, aes(x=value))+geom_histogram(binwidth = 20)+facet_wrap(~stat, scales="free_y")
+```
+```
+The overall pattern for all stats are skeweed to the right, which means that most recorded values are not that kind high. Individual patterns for passing_YDS, Receiving_YDS, Rushing_ATT, and Rushing_YDS are also skewed to the right. The rest of stat do have higher counts on lower(around 0) values.
+```
+
+3)
+```{r}
+newoffClean %>%
+  filter(Opponent_Opponent == "Oregon" | Opponent_Opponent == "Oklahoma") %>%
+  ggplot(aes(x=Opponent_Opponent,y=value))+geom_point()
+```
+```
+We dont usually have good offense when against these two teams. 
+```
+
+4)
+```{r}
+newbio <- bioClean %>%
+  separate(Hometown, c("City","State"), sep = ",")
+head(newbio)
+```
+
+5)
+```{r}
+table(newbio$State)
+```
+
+
+
+### Part 3
+1)
+```{r}
+offNames <-unique(offClean[c("Name")])
+defNames <- unique(defClean[c("Name")])
+offStates <- left_join(offNames, select(newbio, "State", "Name"), by = c("Name"))
+defStates <- left_join(defNames, select(newbio, "State", "Name"), by = c("Name"))
+states <- union(offStates,defStates)
+states
+table(states$State)
+barplot(table(states$State))
+```
+
+2)
+```{r}
+Quarterbacks <- select(newbio, "Name", "Position") %>% 
+  filter(Position == "Quarterback")
+Quarterbacks
+```
+```
+My Ideo was trying to figure out how all the quarterbacks performed and compare to Purdy, Brock. But I couldn't find a efficient way to do it.
+```
